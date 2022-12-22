@@ -11,3 +11,6 @@ ID
 cabal.sandbox.config
 cabal-dev/
 .cabal-sandbox/
+*.iml
+.stack-work/
+.idea/
