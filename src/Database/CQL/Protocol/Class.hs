@@ -15,6 +15,7 @@ import Data.Time.Clock.POSIX
 import Data.UUID (UUID)
 import Database.CQL.Protocol.Types
 import Prelude
+import Language.Haskell.TH
 
 import qualified Database.CQL.Protocol.Tuple.TH as Tuples
 
@@ -245,3 +246,9 @@ instance Cql a => Cql (Set a) where
     fromCql _          = Left "Expected CqlSet."
 
 Tuples.genCqlInstances 16
+
+sel :: Int -> Int -> ExpQ
+sel i n = lamE [pat] rhs
+    where pat = tupP (map varP as)
+          rhs = varE (as !! (i - 1))
+          as  = [ mkName $ "a" ++ show j | j <- [1..n] ]
