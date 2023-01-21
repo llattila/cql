@@ -6,10 +6,13 @@ module Database.CQL.Protocol.Tuple.TH where
 import Control.Applicative
 import Control.Monad
 import Language.Haskell.TH
+import Language.Haskell.TH.Syntax
 import Prelude
+import Database.CQL.Protocol.Murmur3
+import qualified Data.Map as M
+import Data.Maybe
 
--- Templated instances ------------------------------------------------------
-
+--getValues :: [Int32] -> a -> Maybe [Value]
 genInstances :: Int -> Q [Dec]
 genInstances n = join <$> mapM tupleInstance [2 .. n]
 
@@ -22,12 +25,14 @@ tupleInstance n = do
     let ctx = map (AppT (ConT cql)) vtypes
     td <- tupleDecl n
     sd <- storeDecl n
+    vd <- valDecl n
     return
         [ InstanceD Nothing ctx (tcon "PrivateTuple" $: tupleType)
             [ FunD (mkName "count") [countDecl n]
             , FunD (mkName "check") [taggedDecl (var "typecheck") vnames]
             , FunD (mkName "tuple") [td]
             , FunD (mkName "store") [sd]
+            , FunD (mkName "getValues") [vd]
             ]
         , InstanceD Nothing ctx (tcon "Tuple" $: tupleType) []
         ]
@@ -79,6 +84,28 @@ storeDecl n = do
 #endif
     size         = var "put" $$ SigE (litInt n) (tcon "Word16")
     value x v    = var "putValue" $$ VarE x $$ (var "toCql" $$ VarE v)
+-- getValues res (a,b) = Just [0,1]
+valDecl :: Int -> Q Clause
+valDecl n = do
+    let res = mkName "res"
+    let a = mkName "a"
+    others <- mapM mkRow [0..n - 1]
+    cm <- caseMatch
+    return $ Clause [VarP res, VarP a] (NormalB (var "sequence" $$ (var "map" $$ (var "gv" $$ VarE a) $$ VarE res))) [cm] -- others ++ [emptyRow] 
+   where mkRow a = do
+           toModify <- newName "val"
+           return $ FunD (mkName "gv") [Clause [TupP (wildsBefore a ++ [VarP toModify] ++ wildsAfter a), LitP (IntegerL (fromIntegral a))] (NormalB (ConE justName $$ (var "toCql" $$ VarE toModify))) []]
+         wildsBefore a = map (const WildP) [0..a - 1]  
+         wildsAfter a = map (const WildP) [a + 1..n - 1]
+         emptyRow = 
+           FunD (mkName "gv") [Clause [WildP, WildP] (NormalB (ConE nothingName)) []]
+         mkMatch k names = Match (LitP (IntegerL (fromIntegral k))) (NormalB (ConE justName $$ (var "toCql" $$ VarE (names !! k)))) []
+         noMatch = Match WildP (NormalB (ConE nothingName)) []
+         caseMatch = do
+           toFetch <- newName "k"
+           names <- replicateM n (newName "val")
+           let caseMatches = map (\x -> mkMatch x names) [0..n-1]
+           return $ FunD (mkName "gv") [Clause [TupP (map VarP names), VarP toFetch] (NormalB (CaseE (VarE toFetch) (caseMatches ++ [noMatch]))) [] ]
 
 genCqlInstances :: Int -> Q [Dec]
 genCqlInstances n = join <$> mapM cqlInstances [2 .. n]
@@ -168,3 +195,17 @@ mkTup = TupE . map Just
 #else
 mkTup = TupE
 #endif
+
+genSelects :: Int -> Q [Dec]
+genSelects n = forM [(a,b) | a <- [0..n], b <- [1..n], a < b] mkSelDec
+  where mkSelDec (ith, nth) = do
+          selStatement <- sel ith nth
+          let name = mkName $ "sel_" ++ show ith ++ "_" ++ show nth
+          return $ FunD name [Clause [] (NormalB selStatement) []]
+
+sel :: Int -> Int -> ExpQ
+sel i n = lamE [pat] rhs
+    where pat = tupP (map varP as)
+          rhs = varE (as !! i)
+          as  = [ mkName $ "a" ++ show j | j <- [1..n] ]
+

@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 -- | A tuple represents the types of multiple cassandra columns. It is used
 -- to check that column-types match.
@@ -10,6 +11,7 @@ module Database.CQL.Protocol.Tuple
     , check
     , tuple
     , store
+    , getValues
     , Row
     , mkRow
     , fromRow
@@ -28,6 +30,8 @@ import Database.CQL.Protocol.Codec (putValue, getValue)
 import Database.CQL.Protocol.Tuple.TH
 import Database.CQL.Protocol.Types
 import Prelude
+import Data.Int (Int32)
+import Database.CQL.Protocol.RoutingKey
 
 import qualified Data.Vector as Vec
 
@@ -64,6 +68,7 @@ class PrivateTuple a where
     check :: Tagged a ([ColumnType] -> [ColumnType])
     tuple :: Version -> [ColumnType] -> Get a
     store :: Version -> Putter a
+    getValues :: [Int32] -> a -> Maybe [Value] 
 
 class PrivateTuple a => Tuple a
 
@@ -74,6 +79,7 @@ instance PrivateTuple () where
     check     = Tagged $ const []
     tuple _ _ = return ()
     store _   = const $ return ()
+    getValues _ _ = Nothing
 
 instance Tuple ()
 
@@ -84,6 +90,8 @@ instance Cql a => PrivateTuple (Identity a) where
     store v (Identity a) = do
         put (1 :: Word16)
         putValue v (toCql a)
+    getValues [0] a = Just [toCql $ runIdentity a]
+    getValues _ _ = Nothing
 
 instance Cql a => Tuple (Identity a)
 
@@ -94,6 +102,7 @@ instance PrivateTuple Row where
     store v r = do
         put (fromIntegral (rowLength r) :: Word16)
         Vec.mapM_ (putValue v) (values r)
+    getValues pki r = getValuesFromRow r pki
 
 instance Tuple Row
 
@@ -119,4 +128,15 @@ typecheck rr cc = if checkAll (===) rr cc then [] else rr
     (TupleColumn as) === (TupleColumn bs) = checkAll (===) as bs
     a                === b                = a == b
 
-genInstances 48
+getValuesFromRow :: Row -> [Int32] -> Maybe [Value]
+getValuesFromRow row pkis = getValuesFromRowHelper row pkis [] 
+
+getValuesFromRowHelper :: Row -> [Int32] -> [Value] -> Maybe [Value] 
+getValuesFromRowHelper _ [] prev = Just prev
+getValuesFromRowHelper row (x:xs) prev = 
+  case values row !? (fromIntegral x) of
+    Nothing -> Nothing 
+    Just val -> getValuesFromRowHelper row xs $ prev ++ [val]
+
+genInstances 48 
+

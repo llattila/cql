@@ -33,6 +33,7 @@ module Database.CQL.Protocol.Request
     , SerialConsistency (..)
     , encodeQuery
     , encodeQueryParams
+    , retrievePartitionKeys
 
       -- ** Batch
     , Batch             (..)
@@ -343,6 +344,10 @@ encodeQueryParams v p = do
         .|. (if isJust (serialConsistency p) then 0x10 else 0x0)
 
     hasValues = untag (count :: Tagged a Int) /= 0
+
+retrievePartitionKeys :: forall a. Tuple a => Version -> (QueryParams a) -> [Int32] -> Maybe [Value]
+retrievePartitionKeys V3 _ _ = Nothing
+retrievePartitionKeys V4 p pki = getValues pki $ values p
 
 mapCons :: SerialConsistency -> Consistency
 mapCons SerialConsistency      = Serial
