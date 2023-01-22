@@ -139,6 +139,7 @@ module Database.CQL.Protocol
       -- * Row, Tuple and Record
     , module Database.CQL.Protocol.Tuple
     , module Database.CQL.Protocol.Record
+    , module Database.CQL.Protocol.RoutingKey
     ) where
 
 import Database.CQL.Protocol.Class
@@ -148,3 +149,4 @@ import Database.CQL.Protocol.Request
 import Database.CQL.Protocol.Response
 import Database.CQL.Protocol.Tuple
 import Database.CQL.Protocol.Types
+import Database.CQL.Protocol.RoutingKey

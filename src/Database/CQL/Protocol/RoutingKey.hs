@@ -17,7 +17,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Int
 
-newtype MurmurToken = MurmurToken { unMurmurToken :: Int64 }
+newtype RoutingKey  = RoutingKey { unRoutingKey :: Int64 }
   deriving (Eq, Ord, Show)
 
 -- getHostForTimeSeriesData :: Tuple a => Map.Map Int (Set.Set MurmurToken) -> [Int32] -> a -> Maybe Int
@@ -46,10 +46,10 @@ newtype MurmurToken = MurmurToken { unMurmurToken :: Int64 }
 --      (1, [0]) -> generateTokenFromElements [runIdentity tupleToProcess] 
 
 
-generateTokenFromElements :: [Value] -> Maybe MurmurToken
+generateTokenFromElements :: [Value] -> Maybe RoutingKey 
 generateTokenFromElements [] = Nothing
-generateTokenFromElements [x] = Just $ MurmurToken $ fromIntegral $ head $ murmur3 (B.drop 4 $ runPut $ putValue V4 x) 0
-generateTokenFromElements xs = Just $ MurmurToken $ fromIntegral $ head $ murmur3 (B.concat (map generateSingleToken xs)) 0
+generateTokenFromElements [x] = Just $ RoutingKey $ fromIntegral $ head $ murmur3 (B.drop 4 $ runPut $ putValue V4 x) 0
+generateTokenFromElements xs = Just $ RoutingKey $ fromIntegral $ head $ murmur3 (B.concat (map generateSingleToken xs)) 0
 
 generateSingleToken :: Value -> B.ByteString
 generateSingleToken valueToConvert =
