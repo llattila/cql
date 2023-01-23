@@ -31,7 +31,6 @@ import Database.CQL.Protocol.Tuple.TH
 import Database.CQL.Protocol.Types
 import Prelude
 import Data.Int (Int32)
-import Database.CQL.Protocol.RoutingKey
 
 import qualified Data.Vector as Vec
 
