@@ -17,18 +17,6 @@ import Data.Int
 newtype RoutingToken  = RoutingToken { unRoutingToken :: Int64 }
   deriving (Eq, Ord, Show)
 
-getMatchingHost :: Map.Map Int (Set.Set RoutingToken) -> RoutingToken -> Maybe Int
-getMatchingHost hostMap tokenToSeek =
-  let distancesToHosts = Map.map ((\x -> getDistance x tokenToSeek) . Set.toList) hostMap
-  in fst <$> Map.lookupMin distancesToHosts
-
-getDistance :: [RoutingToken] -> RoutingToken -> Int64
-getDistance [] _ = 9223372036854775807
-getDistance [x] (RoutingToken token) = if token > unRoutingToken x then token - unRoutingToken x else 9223372036854775807
-getDistance (x:y:xs) (RoutingToken token) = if token < unRoutingToken y && token > unRoutingToken x
-  then token - unRoutingToken x
-  else getDistance (y:xs) (RoutingToken token)
-
 generateTokenFromElements :: [Value] -> Maybe RoutingToken 
 generateTokenFromElements [] = Nothing
 generateTokenFromElements [x] = Just $ RoutingToken $ fromIntegral $ head $ murmur3 (B.drop 4 $ runPut $ putValue V4 x) 0
