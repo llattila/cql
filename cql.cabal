@@ -1,5 +1,5 @@
 name:                 cql
-version:              4.0.4
+version:              4.0.5
 synopsis:             Cassandra CQL binary protocol.
 stability:            experimental
 license:              OtherLicense
@@ -80,7 +80,6 @@ library
         , uuid             >= 1.2.6
         , vector           >= 0.10
         , utf8-string      >= 1.0.2 
-        , tuple-th         >= 0.2.5
 
 
 test-suite cql-tests
