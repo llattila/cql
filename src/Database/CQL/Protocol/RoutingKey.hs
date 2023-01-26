@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Database.CQL.Protocol.RoutingKey where
 
@@ -13,9 +14,10 @@ import Database.CQL.Protocol.Murmur3
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.Int
+import GHC.Generics
 
 newtype RoutingToken  = RoutingToken { unRoutingToken :: Int64 }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic)
 
 generateTokenFromElements :: [Value] -> Maybe RoutingToken 
 generateTokenFromElements [] = Nothing
